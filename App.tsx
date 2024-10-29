@@ -11,6 +11,7 @@ import {
 import { WebView } from 'react-native-webview';
 import NetInfo from '@react-native-community/netinfo';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as SplashScreen from 'expo-splash-screen';
 
 const App = () => {
   const [loading, setLoading] = useState(true);
@@ -25,8 +26,9 @@ const App = () => {
       const connected = state.isConnected;
       setIsConnected(connected);
 
-      if (connected && !loading) {
+      if (connected && loading) {
         // Reload WebView when reconnected
+        setLoading(true); // Reset loading state to true
         setWebViewKey((prevKey) => prevKey + 1);
       }
     });
@@ -36,6 +38,24 @@ const App = () => {
       unsubscribeNetInfo(); // Cleanup NetInfo listener
     };
   }, [loading]);
+
+  useEffect(() => {
+    const prepare = async () => {
+      // Keep the splash screen visible while we fetch resources
+      await SplashScreen.preventAutoHideAsync();
+    };
+    
+    prepare();
+  }, []);
+
+  const handleLoadEnd = () => {
+    setLoading(false); // Hide loading overlay
+    SplashScreen.hideAsync(); // Hide splash screen
+  };
+
+  const handleError = () => {
+    setLoading(false); // Hide loading overlay on error
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -47,8 +67,8 @@ const App = () => {
             source={{ uri: 'https://asianasa.com/' }}
             javaScriptEnabled={true}
             domStorageEnabled={true}
-            onLoad={() => setLoading(false)}
-            onError={() => setLoading(false)}
+            onLoadEnd={handleLoadEnd} // Use onLoadEnd instead of onLoad
+            onError={handleError} // Handle error to set loading to false
           />
           {loading && (
             <LinearGradient colors={['#80f9f3', '#f6f7f8', '#fce3f2']} style={styles.loadingOverlay}>
@@ -64,7 +84,10 @@ const App = () => {
           <Text style={styles.offlineText}>No Internet Connection</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => setWebViewKey((prevKey) => prevKey + 1)}
+            onPress={() => {
+              setWebViewKey((prevKey) => prevKey + 1);
+              setLoading(true); // Reset loading state on retry
+            }}
           >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
