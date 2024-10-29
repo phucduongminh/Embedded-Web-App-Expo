@@ -16,45 +16,45 @@ import * as SplashScreen from 'expo-splash-screen';
 const App = () => {
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(true);
-  const [webViewKey, setWebViewKey] = useState(1); // Key to reload WebView
+  const [webViewKey, setWebViewKey] = useState(1);
 
   useEffect(() => {
-    const backAction = () => true; // Disable the back button
+    const backAction = () => true;
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
 
     const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
       const connected = state.isConnected;
       setIsConnected(connected);
 
-      if (connected && loading) {
-        // Reload WebView when reconnected
-        setLoading(true); // Reset loading state to true
+      if (connected) {
         setWebViewKey((prevKey) => prevKey + 1);
       }
+      setLoading(true); // Hide loading overlay on connectivity check
+      SplashScreen.hideAsync(); // Ensure splash screen is hidden
     });
 
     return () => {
-      backHandler.remove(); // Cleanup backHandler
-      unsubscribeNetInfo(); // Cleanup NetInfo listener
+      backHandler.remove();
+      unsubscribeNetInfo();
     };
-  }, [loading]);
+  }, []);
 
   useEffect(() => {
     const prepare = async () => {
-      // Keep the splash screen visible while we fetch resources
-      await SplashScreen.preventAutoHideAsync();
+      if (isConnected) {
+        await SplashScreen.preventAutoHideAsync();
+      }
     };
-    
     prepare();
-  }, []);
+  }, [isConnected]);
 
   const handleLoadEnd = () => {
-    setLoading(false); // Hide loading overlay
-    SplashScreen.hideAsync(); // Hide splash screen
+    setLoading(false);
+    SplashScreen.hideAsync();
   };
 
   const handleError = () => {
-    setLoading(false); // Hide loading overlay on error
+    setLoading(false);
   };
 
   return (
@@ -67,8 +67,8 @@ const App = () => {
             source={{ uri: 'https://asianasa.com/' }}
             javaScriptEnabled={true}
             domStorageEnabled={true}
-            onLoadEnd={handleLoadEnd} // Use onLoadEnd instead of onLoad
-            onError={handleError} // Handle error to set loading to false
+            onLoadEnd={handleLoadEnd}
+            onError={handleError}
           />
           {loading && (
             <LinearGradient colors={['#80f9f3', '#f6f7f8', '#fce3f2']} style={styles.loadingOverlay}>
@@ -86,7 +86,7 @@ const App = () => {
             style={styles.retryButton}
             onPress={() => {
               setWebViewKey((prevKey) => prevKey + 1);
-              setLoading(true); // Reset loading state on retry
+              setLoading(true);
             }}
           >
             <Text style={styles.retryButtonText}>Retry</Text>
